@@ -93,7 +93,7 @@ def fit_and_store(name, model_func, t_fit, y_fit, n_param, p0, bounds, is_kp=Fal
     try:
         popt, _ = curve_fit(model_func, t_fit, y_fit, p0=p0, bounds=bounds, maxfev=10000)
     except (RuntimeError, ValueError) as e:
-        print(f"⚠️ {name} 拟合失败：{e}，跳过")
+        print(f" {name} 拟合失败：{e}，跳过")
         return
 
     y_hat_train = model_func(t_train, *popt)
@@ -127,7 +127,7 @@ fit_and_store("Higuchi", higuchi, t_train, y_train, 1, [0.05], (0, 2))
 if has_enough_kp_points:
     fit_and_store("Korsmeyer–Peppas", korsmeyer_peppas, t_kp, y_kp, 2, [0.1,0.5], ((0,0),(5,2)), is_kp=True)
 else:
-    print(f"⚠️ 早期释放点不足（<{MIN_KP_POINTS}），跳过 KP 模型")
+    print(f"释放点不足（<{MIN_KP_POINTS}），跳过 KP 模型")
 
 fits = sorted(fits, key=lambda x: x.rmse_test)
 best = fits[0] if fits else None
