@@ -1,0 +1,148 @@
+```md
+# GRU 滚动预测
+
+本项目实现一个 **GRU 回归模型**，并使用 **滚动预测（Rolling Forecast）/滚动窗口训练（Window=80）** 的方式对时间序列目标（如波动率、收益率的某种度量等）进行一步预测，以获得更贴近论文中“拟合曲线”的效果。
+
+默认关键参数与论文设置靠拢：
+- Rolling Window：`80`
+- 序列长度（seq_len）：`10`
+- GRU：2 层，hidden=100，dropout=0.4
+- 激活：LeakyReLU
+- 损失：MSELoss
+- 优化器：Adam
+
+---
+
+## 1. 目录结构
+
+建议结构如下：
+
+```
+.
+├── gru_rolling_paperlike.py
+├── data.csv
+├── outputs_gru_rolling/
+│   ├── rolling_predictions.csv
+│   ├── rolling_pred.png
+│   └── rolling_rel_error.png
+└── README.md
+```
+
+---
+
+## 2. 环境依赖
+
+Python 版本建议：`>= 3.9`
+
+依赖包（可按需版本）：
+- numpy
+- pandas
+- scikit-learn
+- matplotlib
+- torch
+
+安装示例：
+
+```bash
+pip install numpy pandas scikit-learn matplotlib torch
+```
+
+若使用 GPU，请确保本机 CUDA 与对应 PyTorch 版本匹配。
+
+---
+
+## 3. 数据格式（data.csv）
+
+`data.csv` 至少需要：
+- 一列 **标签列**（要预测的目标），例如 `rv`
+- 若干 **特征列**（输入 X）
+- 可选：时间列 `date`（用于排序；不提供也可以，但必须保证数据本身已按时间顺序排列）
+
+示例（仅示意）：
+
+| date       | x1   | x2   | x3   | rv   |
+|-----------|------|------|------|------|
+| 2018-01-01| ...  | ...  | ...  | ...  |
+| 2018-01-02| ...  | ...  | ...  | ...  |
+
+说明：
+- 默认 `--date_col date`，如你没有 date 列，可以运行时改成不存在的列名（脚本会跳过排序），或把 `date_col` 设置为你真实的时间列名。
+- 默认 `--label_col rv`，请改成你实际的目标列名。
+- 默认 **feature_cols 不需要手动指定**：会自动取 “除 date/label 外的所有列” 作为特征。
+
+---
+
+## 4. 方法说明（Rolling Forecast）
+
+本脚本采用“更贴近论文”的滚动预测流程：
+
+- 先用前 `train_ratio` 的数据做一次 **初始训练**
+- 对测试集中的每个时刻 `t`：
+  1. 取最近 `window=80` 条历史样本作为训练窗口
+  2. 在当前模型基础上 **微调 epochs_roll**
+  3. 使用最近 `seq_len=10` 步特征预测 `t` 时刻的目标值
+
+输出结果为测试段逐点预测值与误差。
+
+---
+
+## 5. 运行方式
+
+
+```bash
+python gru_rolling_paperlike.py \
+  --data_path data.csv \
+  --label_col rv \
+  --window 80 \
+  --seq_len 10 \
+  --hidden 100 --layers 2 --dropout 0.4 \
+  --epochs_init 200 \
+  --epochs_roll 30
+```
+
+运行结束后会在 `outputs_gru_rolling/` 生成：
+- `rolling_predictions.csv`：包含 y_true / y_pred / rel_err
+- `rolling_pred.png`：真实 vs 预测曲线
+- `rolling_rel_error.png`：相对误差曲线
+
+---
+
+## 6. 主要参数说明
+
+- `--data_path`：数据 CSV 路径
+- `--date_col`：时间列名（默认 `date`，存在则会按时间排序）
+- `--label_col`：目标列名（默认 `rv`）
+- `--feature_cols`：手动指定特征列
+- `--train_ratio`：初始训练集比例（默认 0.8）
+
+论文拟合相关：
+- `--window`：滚动训练窗口长度（默认 80）
+- `--seq_len`：GRU 输入序列长度（默认 10）
+
+训练相关：
+- `--epochs_init`：初始训练轮数
+- `--epochs_roll`：每步滚动微调轮数
+- `--batch_size`：批大小（默认 32）
+- `--grad_clip`：梯度裁剪（默认 1.0）
+
+---
+
+## 7. 输出文件说明
+
+### 7.1 rolling_predictions.csv
+
+字段：
+- `y_true`：真实值
+- `y_pred`：预测值
+- `rel_err`：相对误差
+  \[
+  rel\_err = \frac{y\_{pred} - y\_{true}}{|y\_{true}| + \epsilon}
+  \]
+
+### 7.2 rolling_pred.png
+测试段真实曲线与预测曲线对比图。
+
+### 7.3 rolling_rel_error.png
+测试段相对误差曲线（包含 0 基准线）。
+
+---

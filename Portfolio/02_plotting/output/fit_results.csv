@@ -1,0 +1,5 @@
+﻿model,n_param,n_used,rmse_train,rmse_test,aic,aicc,kp_early_only,note
+First-order,1,48,0.0223,0.0142,-363.07,-362.99,False,
+Higuchi,1,48,0.0626,0.1903,-264.0,-263.91,False,
+Zero-order,1,48,0.204,0.4994,-150.6,-150.51,False,
+Korsmeyer–Peppas,2,12,0.2845,0.7426,-85.35,-84.02,True,KP仅拟合早期≤0.6，RMSE含外推误差

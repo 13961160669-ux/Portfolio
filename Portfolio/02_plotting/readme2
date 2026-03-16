@@ -1,0 +1,102 @@
+# Drug Release Kinetics Fitting Pipeline
+---
+
+## 1. 项目概述 + 默认参数
+
+**拟合模型**
+- Zero-order：`Mt/M∞ = k·t`
+- First-order：`Mt/M∞ = 1 - exp(-k·t)`
+- Higuchi：`Mt/M∞ = k·sqrt(t)`
+- Korsmeyer–Peppas（KP）：`Mt/M∞ = k·t^n`
+**默认参数/设定**
+- 随机种子：`SEED = 42`
+- 输出目录：`output/`
+- 时间序列切分：`train=80%`，`test=20%`
+- KP 早期点筛选：训练集内 `y <= 0.6`
+- KP 最少点数：`MIN_KP_POINTS = 10`
+- 拟合：`scipy.optimize.curve_fit`，`maxfev=10000`
+- 绘图时会把曲线 `clip` 到 `[0, 1]`
+
+---
+
+## 2. 目录结构
+
+建议结构：
+
+```
+.
+├── plot_fx_charts.py
+└── README.md
+```
+
+运行后自动生成：
+
+```
+output/
+  fit_results.csv
+  best_fit.png
+  residuals.png
+```
+
+---
+
+## 3. 环境依赖
+
+Python 建议：`>= 3.8`
+
+依赖包：
+- numpy
+- pandas
+- matplotlib
+- scipy
+
+安装：
+
+```bash
+pip install numpy pandas matplotlib scipy
+```
+
+---
+
+## 4. 数据格式
+
+当前脚本示例数据是**代码内生成的模拟数据**（无需外部文件即可运行）。
+
+如果你要换成自己的实验数据，建议准备两列：
+- `t`：时间（例如小时 h）
+- `y`：累计释放率 `Mt/M∞`（建议缩放到 `0~1`；若是百分比请除以 100）
+
+在脚本“数据”部分替换为你的数据即可，例如：
+
+```python
+t = np.array([...])      # 时间
+y_obs = np.array([...])  # 释放率(0~1)
+```
+
+---
+
+## 5. 运行方式
+
+直接运行脚本：
+
+```bash
+python fit_release.py
+```
+
+完成后会提示输出目录：
+
+- `全部完成，输出在文件夹`
+
+---
+
+## 6. 输出文件说明
+
+- `output/fit_results.csv`
+  各模型的对比结果表（参数数量、使用点数、RMSE、AIC/AICc、是否 KP 早期拟合等）
+
+- `output/best_fit.png`
+  训练集/测试集散点 + 各模型拟合曲线；并用竖线标出训练/测试分割点
+
+- `output/residuals.png`
+  最佳模型（按 `rmse_test` 最小选择）的训练集残差诊断图（残差-时间散点 + 残差直方图）
+```
